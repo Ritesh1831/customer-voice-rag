@@ -5,125 +5,91 @@
 <title>Customer Voice RAG Assistant</title>
 <style>
   :root {
-    --bg: #f4f3ef;
+    --bg: #f6f5f1;
     --panel: #ffffff;
-    --border: #e2e0d8;
+    --border: #e5e3da;
     --ink: #1f1e1a;
-    --muted: #7a7870;
+    --muted: #86847a;
     --accent: #0c447c;
     --accent-soft: #e6f1fb;
     --user-bubble: #0c447c;
     --user-text: #ffffff;
-    --bot-bubble: #ffffff;
     --abstain: #a32d2d;
     --abstain-soft: #fcebeb;
     --success: #3b6d11;
     --success-soft: #eaf3de;
-    --radius: 16px;
+    --radius: 18px;
   }
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
     background: var(--bg);
     margin: 0;
-    padding: 32px 16px;
+    padding: 36px 16px;
     color: var(--ink);
   }
   .app { max-width: 760px; margin: 0 auto; }
   header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 8px;
   }
   .header-left { display: flex; align-items: center; gap: 12px; }
   .logo {
-    width: 42px; height: 42px;
-    border-radius: 12px;
-    background: var(--accent);
-    color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px;
-    flex-shrink: 0;
+    width: 44px; height: 44px; border-radius: 13px;
+    background: linear-gradient(160deg, var(--accent), #185fa5);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 19px; flex-shrink: 0;
   }
   header h1 { font-size: 19px; margin: 0; font-weight: 600; }
   header p { font-size: 13px; color: var(--muted); margin: 2px 0 0; }
   #new-chat {
     background: var(--panel); border: 1px solid var(--border); color: var(--muted);
-    font-size: 12.5px; padding: 8px 12px; white-space: nowrap;
+    font-size: 12.5px; padding: 8px 13px; border-radius: 10px;
   }
   #new-chat:hover { color: var(--ink); border-color: #c9c7bc; }
+  .divider { height: 1px; background: var(--border); margin: 16px 0 20px; }
 
   #log {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    padding: 20px;
-    min-height: 380px;
-    max-height: 58vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    box-shadow: 0 2px 10px rgba(20,20,10,0.04);
+    padding: 22px;
+    min-height: 380px; max-height: 58vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 15px;
   }
 
-  #empty-state {
-    margin: auto;
-    text-align: center;
-    color: var(--muted);
-    padding: 20px 10px;
-  }
+  #empty-state { margin: auto; text-align: center; color: var(--muted); padding: 24px 10px; }
   #empty-state .big-logo {
-    width: 52px; height: 52px; border-radius: 14px; background: var(--accent-soft);
+    width: 54px; height: 54px; border-radius: 15px; background: var(--accent-soft);
     color: var(--accent); display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 22px; margin: 0 auto 14px;
+    font-weight: 700; font-size: 23px; margin: 0 auto 16px;
   }
-  #empty-state h2 { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0 0 4px; }
-  #empty-state p { font-size: 13px; margin: 0 0 16px; }
+  #empty-state h2 { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0 0 5px; }
+  #empty-state p { font-size: 13px; margin: 0 0 18px; }
   .examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
   .example-chip {
     background: var(--accent-soft); color: var(--accent);
-    border: none; border-radius: 999px; padding: 8px 14px;
-    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    border: none; border-radius: 999px; padding: 9px 15px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background 0.15s;
   }
-  .example-chip:hover { background: #cecbf6; }
+  .example-chip:hover { background: #d7e6f6; }
 
-  .row {
-    display: flex; gap: 10px; align-items: flex-end;
-    animation: rise 0.25s ease-out;
-  }
+  .row { display: flex; gap: 10px; align-items: flex-end; animation: rise 0.25s ease-out; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   .row.user { flex-direction: row-reverse; }
   .avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700; color: white;
   }
   .row.user .avatar { background: var(--accent); }
-  .row.bot .avatar { background: #5f5e5a; }
-  .bubble {
-    max-width: 78%;
-    padding: 10px 14px;
-    border-radius: var(--radius);
-    line-height: 1.5;
-    font-size: 14.5px;
-  }
-  .row.user .bubble {
-    background: var(--user-bubble); color: var(--user-text);
-    border-bottom-right-radius: 4px;
-  }
-  .row.bot .bubble {
-    background: var(--bot-bubble); border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-  }
-  .row.bot .bubble.abstain {
-    background: var(--abstain-soft); border-color: #f0c9c9; color: var(--abstain);
-  }
-  .row.bot .bubble.error {
-    background: #faeeda; border-color: #f0c98a; color: #854f0b;
-  }
+  .row.bot .avatar { background: #67655c; }
+  .bubble { max-width: 78%; padding: 11px 15px; border-radius: var(--radius); line-height: 1.55; font-size: 14.5px; }
+  .row.user .bubble { background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 5px; }
+  .row.bot .bubble { background: #fbfaf7; border: 1px solid var(--border); border-bottom-left-radius: 5px; }
+  .row.bot .bubble.abstain { background: var(--abstain-soft); border-color: #f0c9c9; color: var(--abstain); }
+  .row.bot .bubble.error { background: #faeeda; border-color: #f0c98a; color: #854f0b; }
 
   .typing-dots { display: inline-flex; gap: 3px; padding: 4px 2px; }
   .typing-dots span {
@@ -135,54 +101,31 @@
   @keyframes tbounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
 
   .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; margin-left: 40px; }
-  .pill {
-    font-size: 11px; padding: 2px 8px; border-radius: 999px;
-    background: var(--accent-soft); color: var(--accent); font-weight: 600;
-  }
+  .pill { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .pill.ground-ok { background: var(--success-soft); color: var(--success); }
   .pill.ground-bad { background: var(--abstain-soft); color: var(--abstain); }
-  .pill.muted { background: #f1efe8; color: var(--muted); }
+  .pill.muted { background: #efeee7; color: var(--muted); }
 
   .playing-indicator { display: inline-flex; gap: 2px; align-items: center; margin-left: 6px; }
-  .playing-indicator span {
-    width: 3px; height: 10px; background: var(--accent); border-radius: 2px;
-    animation: bounce 0.9s ease-in-out infinite;
-  }
+  .playing-indicator span { width: 3px; height: 10px; background: var(--accent); border-radius: 2px; animation: bounce 0.9s ease-in-out infinite; }
   .playing-indicator span:nth-child(2) { animation-delay: 0.15s; }
   .playing-indicator span:nth-child(3) { animation-delay: 0.3s; }
   @keyframes bounce { 0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)} }
 
-  .composer { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
-  input[type=text] {
-    flex: 1; padding: 12px 16px; border-radius: 12px;
-    border: 1px solid var(--border); font-size: 14px; background: var(--panel);
-  }
+  .composer { display: flex; gap: 9px; margin-top: 16px; align-items: center; }
+  input[type=text] { flex: 1; padding: 13px 17px; border-radius: 13px; border: 1px solid var(--border); font-size: 14px; background: var(--panel); }
   input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  button {
-    border: none; border-radius: 12px; cursor: pointer;
-    font-size: 14px; font-weight: 600; padding: 12px 18px;
-  }
+  button { border: none; border-radius: 13px; cursor: pointer; font-size: 14px; font-weight: 600; padding: 13px 20px; }
   #send { background: var(--accent); color: white; }
-  #mic {
-    width: 46px; padding: 0; background: var(--panel); border: 1px solid var(--border);
-    font-size: 17px;
-  }
-  #mic.rec {
-    background: var(--abstain); border-color: var(--abstain); color: white;
-    animation: pulse 1.2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(163,45,45,0.35); }
-    50% { box-shadow: 0 0 0 8px rgba(163,45,45,0); }
-  }
-  .footer-row {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 10px; font-size: 12.5px; color: var(--muted);
-  }
+  #send:hover { background: #0a3a68; }
+  #mic { width: 48px; padding: 0; background: var(--panel); border: 1px solid var(--border); font-size: 17px; }
+  #mic.rec { background: var(--abstain); border-color: var(--abstain); color: white; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(163,45,45,0.35); } 50% { box-shadow: 0 0 0 9px rgba(163,45,45,0); } }
+  .footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
   label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
   @media (max-width: 480px) {
-    body { padding: 16px 10px; }
+    body { padding: 18px 10px; }
     .bubble { max-width: 86%; }
     #new-chat span.label { display: none; }
   }
@@ -200,6 +143,7 @@
     </div>
     <button id="new-chat" onclick="newChat()">↺ <span class="label">New chat</span></button>
   </header>
+  <div class="divider"></div>
 
   <div id="log">
     <div id="empty-state">
@@ -243,10 +187,7 @@ function connect() {
 }
 connect();
 
-function hideEmptyState() {
-  const e = document.getElementById('empty-state');
-  if (e) e.remove();
-}
+function hideEmptyState() { const e = document.getElementById('empty-state'); if (e) e.remove(); }
 
 function showTyping() {
   hideTyping();
@@ -254,56 +195,29 @@ function showTyping() {
   row.className = 'row bot';
   row.innerHTML = `<div class="avatar">A</div>
     <div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
-  log.appendChild(row);
-  log.scrollTop = log.scrollHeight;
-  typingRow = row;
+  log.appendChild(row); log.scrollTop = log.scrollHeight; typingRow = row;
 }
-function hideTyping() {
-  if (typingRow) { typingRow.remove(); typingRow = null; }
-}
+function hideTyping() { if (typingRow) { typingRow.remove(); typingRow = null; } }
 
 function addRow(who, text) {
   hideTyping();
   const row = document.createElement('div');
   row.className = 'row ' + who;
-  const av = document.createElement('div');
-  av.className = 'avatar';
-  av.textContent = who === 'user' ? 'U' : 'A';
-  const bub = document.createElement('div');
-  bub.className = 'bubble';
-  bub.textContent = text;
-  row.appendChild(who === 'user' ? bub : av);
-  row.appendChild(who === 'user' ? av : bub);
-  log.appendChild(row);
-  log.scrollTop = log.scrollHeight;
+  const av = document.createElement('div'); av.className = 'avatar'; av.textContent = who === 'user' ? 'U' : 'A';
+  const bub = document.createElement('div'); bub.className = 'bubble'; bub.textContent = text;
+  row.appendChild(who === 'user' ? bub : av); row.appendChild(who === 'user' ? av : bub);
+  log.appendChild(row); log.scrollTop = log.scrollHeight;
   return bub;
 }
 
-function addPills() {
-  const p = document.createElement('div');
-  p.className = 'pills';
-  log.appendChild(p);
-  return p;
-}
-
-function pill(text, cls) {
-  const s = document.createElement('span');
-  s.className = 'pill ' + (cls || '');
-  s.textContent = text;
-  return s;
-}
+function addPills() { const p = document.createElement('div'); p.className = 'pills'; log.appendChild(p); return p; }
+function pill(text, cls) { const s = document.createElement('span'); s.className = 'pill ' + (cls || ''); s.textContent = text; return s; }
 
 function handle(m) {
-  if (m.type === 'transcript') {
-    addRow('user', m.text);
-    showTyping();
-  } else if (m.type === 'error') {
-    const b = addRow('bot', m.text);
-    b.classList.add('error');
-    curBubble = null; curPills = null;
-  } else if (m.type === 'meta') {
-    curBubble = addRow('bot', '');
-    curPills = addPills();
+  if (m.type === 'transcript') { addRow('user', m.text); showTyping(); }
+  else if (m.type === 'error') { const b = addRow('bot', m.text); b.classList.add('error'); curBubble = null; curPills = null; }
+  else if (m.type === 'meta') {
+    curBubble = addRow('bot', ''); curPills = addPills();
     if (m.language) curPills.appendChild(pill(m.language === 'hinglish' ? 'Hinglish' : 'English'));
   } else if (m.type === 'sentence') {
     if (!curBubble) { curBubble = addRow('bot', ''); curPills = addPills(); }
@@ -311,17 +225,13 @@ function handle(m) {
     log.scrollTop = log.scrollHeight;
   } else if (m.type === 'abstain') {
     hideTyping();
-    curBubble = addRow('bot', m.text);
-    curBubble.classList.add('abstain');
-    curPills = addPills();
-    curPills.appendChild(pill('Abstained', 'ground-bad'));
+    curBubble = addRow('bot', m.text); curBubble.classList.add('abstain');
+    curPills = addPills(); curPills.appendChild(pill('Abstained', 'ground-bad'));
     if (m.language) curPills.appendChild(pill(m.language === 'hinglish' ? 'Hinglish' : 'English'));
     curBubble = null;
-  } else if (m.type === 'audio') {
-    scheduleAudio(m.data);
-  } else if (m.type === 'tts_failed') {
-    if (curPills) curPills.appendChild(pill('Audio unavailable', 'muted'));
-  } else if (m.type === 'done') {
+  } else if (m.type === 'audio') { scheduleAudio(m.data); }
+  else if (m.type === 'tts_failed') { if (curPills) curPills.appendChild(pill('Audio unavailable', 'muted')); }
+  else if (m.type === 'done') {
     if (curPills) {
       curPills.appendChild(pill(m.grounded ? 'Grounded' : 'Ungrounded', m.grounded ? 'ground-ok' : 'ground-bad'));
       curPills.appendChild(pill(`${m.total_ms}ms`, 'muted'));
@@ -352,41 +262,27 @@ async function scheduleAudio(base64) {
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
   let audioBuffer;
-  try {
-    audioBuffer = await ctx.decodeAudioData(bytes.buffer);
-  } catch (e) {
-    console.error('audio decode failed', e);
-    return;
-  }
+  try { audioBuffer = await ctx.decodeAudioData(bytes.buffer); }
+  catch (e) { console.error('audio decode failed', e); return; }
   const source = ctx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(ctx.destination);
+  source.buffer = audioBuffer; source.connect(ctx.destination);
   const startAt = Math.max(ctx.currentTime + 0.05, nextStartTime);
   source.start(startAt);
   nextStartTime = startAt + audioBuffer.duration;
-  pendingSources++;
-  updatePlayingBadge(true);
-  source.onended = () => {
-    pendingSources--;
-    if (pendingSources <= 0) updatePlayingBadge(false);
-  };
+  pendingSources++; updatePlayingBadge(true);
+  source.onended = () => { pendingSources--; if (pendingSources <= 0) updatePlayingBadge(false); };
 }
 
 function send() {
   getAudioCtx();
   const i = document.getElementById('q'), t = i.value.trim();
   if (!t) return;
-  hideEmptyState();
-  addRow('user', t); i.value = ''; curBubble = null; curPills = null;
+  hideEmptyState(); addRow('user', t); i.value = ''; curBubble = null; curPills = null;
   showTyping();
-  ws.send(JSON.stringify({ type: 'text', text: t, session_id: SESSION_ID,
-    audio_reply: document.getElementById('voice').checked }));
+  ws.send(JSON.stringify({ type: 'text', text: t, session_id: SESSION_ID, audio_reply: document.getElementById('voice').checked }));
 }
 
-function useExample(text) {
-  document.getElementById('q').value = text;
-  send();
-}
+function useExample(text) { document.getElementById('q').value = text; send(); }
 
 function newChat() {
   SESSION_ID = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random());
@@ -401,8 +297,7 @@ function newChat() {
         <button class="example-chip" onclick="useExample('hi')">Say hi</button>
       </div>
     </div>`;
-  curBubble = null; curPills = null; typingRow = null;
-  nextStartTime = 0;
+  curBubble = null; curPills = null; typingRow = null; nextStartTime = 0;
 }
 
 async function toggleMic() {
@@ -421,10 +316,8 @@ async function toggleMic() {
       fr.onloadend = () => r(fr.result.split(',')[1]);
       fr.readAsDataURL(blob);
     });
-    hideEmptyState();
-    curBubble = null; curPills = null;
-    ws.send(JSON.stringify({ type: 'audio', data: b64, session_id: SESSION_ID,
-      audio_reply: document.getElementById('voice').checked }));
+    hideEmptyState(); curBubble = null; curPills = null;
+    ws.send(JSON.stringify({ type: 'audio', data: b64, session_id: SESSION_ID, audio_reply: document.getElementById('voice').checked }));
   };
   rec.start(); recording = true; btn.classList.add('rec');
 }

@@ -1,27 +1,25 @@
-"""Build the Chroma collection + BM25 index."""
+"""Build the Chroma Cloud collection. No local persistence — the cloud
+database is the only place the index lives, so there's nothing to gitignore
+or keep in sync locally."""
 from __future__ import annotations
-
-import json
-import pickle
-
-import chromadb
-from chromadb.config import Settings as ChromaSettings
 
 from config.settings import settings
 from src.ingestion.chunker import Chunk
 
-COLLECTION = "novapay_kb"
+COLLECTION = "customer_voice_rag_kb"
 
 
 def get_client():
-    return chromadb.PersistentClient(
-        path=str(settings.chroma_dir),
-        settings=ChromaSettings(anonymized_telemetry=False, allow_reset=True),
-    )
+    import chromadb
+    kwargs = {"api_key": settings.chroma_api_key}
+    if settings.chroma_tenant:
+        kwargs["tenant"] = settings.chroma_tenant
+    if settings.chroma_database:
+        kwargs["database"] = settings.chroma_database
+    return chromadb.CloudClient(**kwargs)
 
 
 def build_index(chunks: list[Chunk]) -> None:
-    from src.ingestion.chunker import est_tokens  # noqa
     from src.retrieval.embedder import encode_documents
 
     client = get_client()
@@ -30,19 +28,10 @@ def build_index(chunks: list[Chunk]) -> None:
     except Exception:
         pass
 
-    coll = client.create_collection(
-        name=COLLECTION,
-        metadata={
-            # HNSW tuned for a small corpus + high recall
-            "hnsw:space": "cosine",
-            "hnsw:construction_ef": 400,
-            "hnsw:search_ef": 200,
-            "hnsw:M": 32,
-        },
-    )
+    coll = client.create_collection(name=COLLECTION)
 
     texts = [c.text for c in chunks]
-    print(f"Embedding {len(texts)} chunks with BGE-M3 (CPU)...")
+    print(f"Embedding {len(texts)} chunks with Cohere...")
     emb = encode_documents(texts)
 
     coll.add(
@@ -52,33 +41,8 @@ def build_index(chunks: list[Chunk]) -> None:
         metadatas=[c.metadata for c in chunks],
     )
 
-    # Persist sparse vectors + BM25 corpus alongside
-    sparse_store = {
-        c.id: {str(k): float(v) for k, v in sp.items()}
-        for c, sp in zip(chunks, emb["sparse"])
-    }
-    (settings.chroma_dir / "sparse.json").write_text(
-        json.dumps(sparse_store), encoding="utf-8"
-    )
-
-    from rank_bm25 import BM25Okapi
-    import re
-    tokenized = [re.findall(r"[a-z0-9$%.]+", c.text.lower()) for c in chunks]
-    bm25 = BM25Okapi(tokenized)
-    with open(settings.chroma_dir / "bm25.pkl", "wb") as f:
-        pickle.dump({"bm25": bm25, "ids": [c.id for c in chunks]}, f)
-
-    manifest = {
-        "n_chunks": len(chunks),
-        "by_kind": {},
-        "sections": sorted({c.metadata["section_title"] for c in chunks}),
-    }
+    by_kind: dict[str, int] = {}
     for c in chunks:
-        manifest["by_kind"][c.metadata["kind"]] = (
-            manifest["by_kind"].get(c.metadata["kind"], 0) + 1
-        )
-    (settings.chroma_dir / "manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
-    )
-    print(f"Indexed {len(chunks)} chunks -> {settings.chroma_dir}")
-    print(json.dumps(manifest["by_kind"], indent=2))
+        by_kind[c.metadata["kind"]] = by_kind.get(c.metadata["kind"], 0) + 1
+    print(f"Indexed {len(chunks)} chunks in Chroma Cloud collection '{COLLECTION}'")
+    print(by_kind)

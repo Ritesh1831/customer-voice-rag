@@ -46,7 +46,7 @@ def _ctx_header(b: Block) -> str:
         parts.append(f"Section {b.section_no}: {b.section_title}")
     if b.subsection_no:
         parts.append(b.subsection_title)
-    return " > ".join(parts) if parts else "NovaPay Customer Support"
+    return " > ".join(parts) if parts else "Customer Support Knowledge Base"
 
 
 def build_chunks(blocks: list[Block]) -> list[Chunk]:

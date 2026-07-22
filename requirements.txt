@@ -6,31 +6,15 @@ pydantic-settings==2.6.1
 # --- PDF parsing ---
 pdfplumber==0.11.4
 
-# torch is still a dependency of optimum's ORTModel wrapper (tensor
-# container only — actual compute runs in ONNX Runtime, not torch).
-# Install from the CPU-only index first (handled by the Dockerfile),
-# or plain PyPI pulls the much larger CUDA build unnecessarily.
-torch==2.5.1
-
-# --- Embeddings + reranking (ONNX Runtime, local CPU) ---
-transformers==4.44.2
-huggingface_hub>=0.24.0
-onnxruntime==1.20.1
-optimum[onnxruntime]==1.23.3
-
-# --- Vector store ---
-chromadb==0.5.20
-
-# --- Sparse / lexical ---
+# --- Retrieval: BM25 (local, lightweight, no ML) ---
 rank-bm25==0.2.2
 
-# --- APIs ---
+# --- Cloud services: STT/LLM/TTS (Groq), Hinglish TTS (Sarvam),
+# embeddings + reranking (Cohere), vector database (Chroma Cloud) ---
 groq==0.13.0
+cohere>=5.6.0
+chromadb>=0.5.20
 httpx==0.27.2
-
-# --- TTS (local) ---
-kokoro-onnx==0.4.7
-soundfile==0.12.1
 numpy==2.1.3
 
 # --- Server ---

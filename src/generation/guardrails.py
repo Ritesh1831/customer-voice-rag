@@ -28,7 +28,6 @@ _STOP = {
 
 
 def should_abstain_pre(hits) -> tuple[bool, str]:
-    """Skip generation entirely when retrieval is clearly too weak."""
     if not hits:
         return True, "no_hits"
     best = max(h.rerank_score for h in hits)
@@ -43,7 +42,6 @@ def _norm_num(s: str) -> str:
 
 def check_grounding(answer: str, hits, abstain_sentence: str,
                      language: str = "en") -> tuple[bool, str]:
-    """Verify the answer's numbers and content words come from the retrieved context."""
     if not settings.enable_grounding_check:
         return True, ""
     if answer.strip() == abstain_sentence.strip():
@@ -51,7 +49,6 @@ def check_grounding(answer: str, hits, abstain_sentence: str,
 
     context = " ".join(h.text for h in hits).lower()
 
-    # --- 1. Every number in the answer must exist in the context ---
     ctx_nums = {_norm_num(m) for m in NUM_RE.findall(context)}
     ans_nums = {_norm_num(m) for m in NUM_RE.findall(answer)}
     ans_nums = {n for n in ans_nums if n and n not in {"1", "2", "3", "0"}}
@@ -59,10 +56,6 @@ def check_grounding(answer: str, hits, abstain_sentence: str,
     if missing:
         return False, f"ungrounded_numbers={sorted(missing)}"
 
-    # --- 2. Lexical overlap floor ---
-    # For Hinglish answers, exclude Hindi filler words from the count first —
-    # otherwise a valid answer full of "hai/kya/aur" would falsely read as
-    # "not grounded" simply because those words aren't in the (English) context.
     extra_stop = HINGLISH_WORDS if language == "hinglish" else set()
     ctx_words = set(re.findall(r"[a-z]{3,}", context)) - _STOP
     ans_words = set(re.findall(r"[a-z]{3,}", answer.lower())) - _STOP - extra_stop

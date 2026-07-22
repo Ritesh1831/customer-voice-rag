@@ -15,7 +15,7 @@ from config.settings import settings
 from src import pipeline
 from src.voice import stt, tts
 
-app = FastAPI(title="NovaPay Voice RAG")
+app = FastAPI(title="Customer Voice RAG Assistant")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )

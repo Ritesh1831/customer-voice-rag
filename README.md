@@ -19,10 +19,10 @@ Language detection (English / Hinglish)
 Conversational memory ──► rewrites follow-ups into standalone questions
         │                  (only triggered when a question looks like a follow-up)
         ▼
-Hybrid retrieval: dense (BGE-M3) + sparse (BGE-M3 lexical) + BM25
+Hybrid retrieval: dense (Cohere Embed, via Chroma Cloud) + BM25
         │           → Reciprocal Rank Fusion
         ▼
-Cross-encoder reranking (bge-reranker-v2-m3, INT8)
+Cross-encoder reranking (Cohere Rerank v3.5)
         │
         ▼
 Pre-generation gate ──► abstain if best rerank score is too low (skips LLM call)
@@ -39,41 +39,41 @@ Text reply + sentence-by-sentence streamed TTS (gapless playback)
 
 ## Models used & parameters
 
-| Component | Model | Params | Runs on | Key parameters |
-|---|---|---|---|---|
-| Speech-to-text | `whisper-large-v3-turbo` | 809M | Groq API | `temperature=0`, auto language-detect |
-| LLM (answers) | `llama-3.3-70b-versatile` | 70B | Groq API | `temperature=0`, `seed=42`, streaming |
-| LLM (query rewrite) | `llama-3.1-8b-instant` | 8B | Groq API | `temperature=0`, only invoked for follow-up questions |
-| Embeddings | `BAAI/bge-m3` | 568M | Local (ONNX Runtime) | dense + sparse in one forward pass, `max_length=1024` |
-| Reranker | `bge-reranker-v2-m3` (INT8) | 568M | Local (ONNX Runtime) | scores top ~20 fused candidates |
-| TTS (English) | Orpheus (`canopylabs/orpheus-v1-english`) | — | Groq API | |
-| TTS (Hinglish) | Kokoro-82M | 82M | Local (ONNX) | |
-| Vector store | Chroma | — | Local | HNSW, cosine similarity |
-| Lexical search | BM25 (`rank-bm25`) | — | Local | catches exact-token matches (fees, tier numbers) |
+| Component | Model | Runs on | Key parameters |
+|---|---|---|---|
+| Speech-to-text | `whisper-large-v3-turbo` | Groq API | `temperature=0`, auto language-detect |
+| LLM (answers) | `llama-3.3-70b-versatile` | Groq API | `temperature=0`, `seed=42`, streaming |
+| LLM (query rewrite) | `llama-3.1-8b-instant` | Groq API | only invoked for follow-up questions |
+| Embeddings | Cohere `embed-multilingual-v3.0` | API | dense vectors, batched (90/call) |
+| Reranker | Cohere `rerank-v3.5` | API | scores top ~20 fused candidates |
+| TTS (English) | Orpheus (`canopylabs/orpheus-v1-english`) | Groq API | |
+| TTS (Hinglish) | Sarvam Bulbul v3 | API | purpose-trained for Hindi/English code-switching |
+| Vector database | Chroma Cloud | Managed | fully hosted, no local persistence |
+| Lexical search | BM25 (`rank-bm25`) | Local, in-process | rebuilt fresh from the database at each startup |
 
-Retrieval tuning: `dense_k=25`, `sparse_k=25` candidates fused via RRF (`k=60`) down to
-`final_k=4` chunks sent to the LLM. Guardrail thresholds: `rerank_abstain_threshold=-2.0`
-(pre-generation gate), `grounding_min_overlap=0.40` (post-generation gate).
+Retrieval tuning: `dense_k=25` candidates fused via RRF (`k=60`) down to `final_k=4`
+chunks sent to the LLM. Guardrail thresholds (Cohere's 0-1 relevance scale):
+`rerank_abstain_threshold=0.15` (pre-generation gate), `grounding_min_overlap=0.40`
+(post-generation gate).
 
 ## Major features
 
-- **Hybrid retrieval with Reciprocal Rank Fusion** — dense + sparse + BM25 combined,
-  so both semantic similarity and exact-token matches are covered.
+- **Hybrid retrieval with Reciprocal Rank Fusion** — dense + BM25 combined, so both
+  semantic similarity and exact-token matches (fee amounts, tier numbers) are covered.
 - **Layered, zero-hallucination-by-design guardrails** — a pre-generation gate skips
   the LLM entirely when retrieval confidence is low, and a post-generation check
   verifies every number in the answer against the retrieved context before returning it.
 - **Conversational memory** with a cheap heuristic gate — only pays for an LLM
-  rewrite call when a question actually looks like a follow-up, so ordinary questions
-  incur zero extra latency.
+  rewrite call when a question actually looks like a follow-up.
 - **Hinglish support end-to-end** — language detection drives the LLM's response
-  language, the exact abstention sentence used, and which TTS engine/voice is used,
-  kept consistent across text and audio in the same turn.
+  language, the exact abstention sentence used, and which TTS voice is used, kept
+  consistent across text and audio in the same turn.
 - **Chitchat routing** — greetings and small talk answered instantly via regex,
   bypassing retrieval and the LLM.
 - **Semantic response caching** — near-duplicate questions reuse a prior verified answer.
 - **Sentence-level streaming with gapless audio** — TTS starts on the first completed
-  sentence rather than waiting for the full response; audio clips are scheduled
-  back-to-back on a single Web Audio timeline instead of playing as separate clips.
+  sentence; audio clips are scheduled back-to-back on a single Web Audio timeline
+  instead of playing as separate clips.
 - **Structure-aware document ingestion** — a custom parser distinguishes headings,
   bullets, tables, and FAQ pairs; table rows are linearized into standalone sentences
   and every chunk carries a contextual header so isolated fragments stay retrievable.
@@ -82,16 +82,20 @@ Retrieval tuning: `dense_k=25`, `sparse_k=25` candidates fused via RRF (`k=60`) 
 
 ## Notable engineering decisions
 
-- **Embeddings and reranking run on ONNX Runtime, not native PyTorch.** This started
-  as a fix for a reproducible native crash (`0xC0000005` access violation inside
-  torch's `c10.dll`, isolated via Windows Event Viewer and confirmed by testing
-  plain torch operations against actual model inference separately) and turned out
-  to also be the better architecture — no local model tracing/export step, smaller
-  and more predictable memory footprint.
-- **A pip conflict masked a second pip conflict.** `FlagEmbedding`'s exact
-  `transformers` pin was fixed first, which surfaced an unrelated `numpy` version
-  conflict with the TTS library — resolved by reproducing the full dependency
-  resolution in an isolated environment rather than guessing at version bumps.
+- **Fully managed backend, by design, not by default.** Embeddings, reranking, the
+  vector database, and Hinglish TTS all run as managed API services rather than local
+  models. This followed direct, measured evidence: local ONNX inference caused a
+  reproducible native crash on Windows (`0xC0000005` inside torch's `c10.dll`,
+  isolated via Event Viewer), and running three simultaneous local models created
+  real memory-pressure failures on constrained hardware. Rather than working around
+  both issues, the fix was to remove local model inference from the critical path
+  entirely — which also happens to make the app trivially deployable on a free-tier
+  host, since there's no multi-gigabyte model to load into memory.
+- **Reranker score scale is not portable across providers.** A local cross-encoder's
+  raw logits and Cohere's 0-1 relevance score are different scales; reusing a
+  threshold tuned for one against the other would silently disable the abstention
+  gate. Caught before it shipped by explicitly checking the guardrail's behavior
+  after switching providers, not just confirming the API call succeeded.
 - **STT prompt-echo hallucination.** A biasing prompt that was too long and
   jargon-dense caused Whisper to occasionally regurgitate fragments of the prompt
   itself instead of transcribing the audio — a known Whisper failure mode, fixed by
@@ -100,7 +104,3 @@ Retrieval tuning: `dense_k=25`, `sparse_k=25` candidates fused via RRF (`k=60`) 
   inflated because the eval script wasn't recognizing correct self-abstentions as
   abstentions — fixed at the harness level; true hallucination rate on the test set
   is 0%.
-- **Measured resource tradeoffs, not assumed ones.** TTS was split between a cloud
-  model (English) and a local model (Hinglish) after directly observing that
-  running three simultaneous local ONNX models caused real memory-pressure failures
-  on constrained hardware — the split was a measured fix, not a default choice.
