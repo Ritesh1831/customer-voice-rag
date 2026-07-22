@@ -5,19 +5,20 @@
 <title>Customer Voice RAG Assistant</title>
 <style>
   :root {
-    --bg: #f6f5f1;
-    --panel: #ffffff;
-    --border: #e5e3da;
-    --ink: #1f1e1a;
-    --muted: #86847a;
-    --accent: #0c447c;
-    --accent-soft: #e6f1fb;
-    --user-bubble: #0c447c;
+    --bg: #14161a;
+    --panel: #1b1e24;
+    --panel-alt: #20232a;
+    --border: #2c3038;
+    --ink: #eceef1;
+    --muted: #8b909b;
+    --accent: #4f9cf0;
+    --accent-soft: #1c2c40;
+    --user-bubble: #2a5ea8;
     --user-text: #ffffff;
-    --abstain: #a32d2d;
-    --abstain-soft: #fcebeb;
-    --success: #3b6d11;
-    --success-soft: #eaf3de;
+    --abstain: #e07070;
+    --abstain-soft: #3a2222;
+    --success: #6fbf6f;
+    --success-soft: #1f3323;
     --radius: 18px;
   }
   * { box-sizing: border-box; }
@@ -36,28 +37,30 @@
   .header-left { display: flex; align-items: center; gap: 12px; }
   .logo {
     width: 44px; height: 44px; border-radius: 13px;
-    background: linear-gradient(160deg, var(--accent), #185fa5);
+    background: linear-gradient(160deg, var(--accent), #2a5ea8);
     color: white; display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 19px; flex-shrink: 0;
   }
-  header h1 { font-size: 19px; margin: 0; font-weight: 600; }
+  header h1 { font-size: 19px; margin: 0; font-weight: 600; color: var(--ink); }
   header p { font-size: 13px; color: var(--muted); margin: 2px 0 0; }
   #new-chat {
     background: var(--panel); border: 1px solid var(--border); color: var(--muted);
     font-size: 12.5px; padding: 8px 13px; border-radius: 10px;
   }
-  #new-chat:hover { color: var(--ink); border-color: #c9c7bc; }
+  #new-chat:hover { color: var(--ink); border-color: #454a54; }
   .divider { height: 1px; background: var(--border); margin: 16px 0 20px; }
 
   #log {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: 0 2px 10px rgba(20,20,10,0.04);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.28);
     padding: 22px;
     min-height: 380px; max-height: 58vh; overflow-y: auto;
     display: flex; flex-direction: column; gap: 15px;
   }
+  #log::-webkit-scrollbar { width: 8px; }
+  #log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
 
   #empty-state { margin: auto; text-align: center; color: var(--muted); padding: 24px 10px; }
   #empty-state .big-logo {
@@ -73,7 +76,7 @@
     border: none; border-radius: 999px; padding: 9px 15px;
     font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background 0.15s;
   }
-  .example-chip:hover { background: #d7e6f6; }
+  .example-chip:hover { background: #24374f; }
 
   .row { display: flex; gap: 10px; align-items: flex-end; animation: rise 0.25s ease-out; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -84,12 +87,12 @@
     font-size: 13px; font-weight: 700; color: white;
   }
   .row.user .avatar { background: var(--accent); }
-  .row.bot .avatar { background: #67655c; }
+  .row.bot .avatar { background: #454a54; }
   .bubble { max-width: 78%; padding: 11px 15px; border-radius: var(--radius); line-height: 1.55; font-size: 14.5px; }
   .row.user .bubble { background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 5px; }
-  .row.bot .bubble { background: #fbfaf7; border: 1px solid var(--border); border-bottom-left-radius: 5px; }
-  .row.bot .bubble.abstain { background: var(--abstain-soft); border-color: #f0c9c9; color: var(--abstain); }
-  .row.bot .bubble.error { background: #faeeda; border-color: #f0c98a; color: #854f0b; }
+  .row.bot .bubble { background: var(--panel-alt); border: 1px solid var(--border); color: var(--ink); border-bottom-left-radius: 5px; }
+  .row.bot .bubble.abstain { background: var(--abstain-soft); border-color: #5a3232; color: var(--abstain); }
+  .row.bot .bubble.error { background: #3a3020; border-color: #5a4a28; color: #e0b870; }
 
   .typing-dots { display: inline-flex; gap: 3px; padding: 4px 2px; }
   .typing-dots span {
@@ -104,7 +107,7 @@
   .pill { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .pill.ground-ok { background: var(--success-soft); color: var(--success); }
   .pill.ground-bad { background: var(--abstain-soft); color: var(--abstain); }
-  .pill.muted { background: #efeee7; color: var(--muted); }
+  .pill.muted { background: #262a31; color: var(--muted); }
 
   .playing-indicator { display: inline-flex; gap: 2px; align-items: center; margin-left: 6px; }
   .playing-indicator span { width: 3px; height: 10px; background: var(--accent); border-radius: 2px; animation: bounce 0.9s ease-in-out infinite; }
@@ -113,14 +116,18 @@
   @keyframes bounce { 0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)} }
 
   .composer { display: flex; gap: 9px; margin-top: 16px; align-items: center; }
-  input[type=text] { flex: 1; padding: 13px 17px; border-radius: 13px; border: 1px solid var(--border); font-size: 14px; background: var(--panel); }
+  input[type=text] {
+    flex: 1; padding: 13px 17px; border-radius: 13px; border: 1px solid var(--border);
+    font-size: 14px; background: var(--panel); color: var(--ink);
+  }
+  input[type=text]::placeholder { color: var(--muted); }
   input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   button { border: none; border-radius: 13px; cursor: pointer; font-size: 14px; font-weight: 600; padding: 13px 20px; }
-  #send { background: var(--accent); color: white; }
-  #send:hover { background: #0a3a68; }
-  #mic { width: 48px; padding: 0; background: var(--panel); border: 1px solid var(--border); font-size: 17px; }
-  #mic.rec { background: var(--abstain); border-color: var(--abstain); color: white; animation: pulse 1.2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(163,45,45,0.35); } 50% { box-shadow: 0 0 0 9px rgba(163,45,45,0); } }
+  #send { background: var(--accent); color: #0d1117; }
+  #send:hover { background: #6bacf5; }
+  #mic { width: 48px; padding: 0; background: var(--panel); border: 1px solid var(--border); font-size: 17px; color: var(--ink); }
+  #mic.rec { background: var(--abstain); border-color: var(--abstain); color: #1a1010; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(224,112,112,0.35); } 50% { box-shadow: 0 0 0 9px rgba(224,112,112,0); } }
   .footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
   label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
@@ -181,7 +188,8 @@ let audioCtx = null, nextStartTime = 0, pendingSources = 0;
 
 function connect() {
   const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);  ws.onopen = () => statusEl.textContent = '●\u00A0connected';
+  ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);
+  ws.onopen = () => statusEl.textContent = '●\u00A0connected';
   ws.onclose = () => { statusEl.textContent = '●\u00A0reconnecting…'; setTimeout(connect, 1500); };
   ws.onmessage = e => handle(JSON.parse(e.data));
 }
