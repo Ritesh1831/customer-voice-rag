@@ -1,7 +1,10 @@
 """Hybrid retrieval: dense (Cohere, via Chroma Cloud) + BM25 (rebuilt fresh
-at startup from Chroma Cloud's stored documents — the cloud database is
-the single source of truth) -> Reciprocal Rank Fusion -> Cohere rerank ->
-neighbor expansion."""
+at startup from Chroma Cloud's stored documents) -> Reciprocal Rank Fusion
+-> Cohere rerank -> neighbor expansion.
+
+The full collection is cached in memory at startup (doc_map) so BM25-only
+hits and neighbor expansion never need a second network round-trip to
+Chroma Cloud — only the actual vector search does."""
 from __future__ import annotations
 
 import re
@@ -63,6 +66,13 @@ def _load_state():
     raw_texts = all_docs["documents"]
     metadatas = all_docs["metadatas"]
 
+    # Cache the full collection in memory once — this is what lets BM25
+    # matches and neighbor expansion skip extra Chroma Cloud round-trips.
+    _state["doc_map"] = {
+        cid: {"text": text, "metadata": meta}
+        for cid, text, meta in zip(ids, raw_texts, metadatas)
+    }
+
     tokenized = []
     for text, meta in zip(raw_texts, metadatas):
         header = meta.get("header", "")
@@ -103,6 +113,7 @@ def retrieve(query: str) -> list[Hit]:
     qv = embedder.encode_query(expanded)
     hits: dict[str, Hit] = {}
 
+    # --- 1. Dense (this is the one call that genuinely needs the network) ---
     res = st["coll"].query(
         query_embeddings=[qv["dense"].tolist()],
         n_results=settings.dense_k,
@@ -113,6 +124,7 @@ def retrieve(query: str) -> list[Hit]:
     ):
         hits[cid] = Hit(id=cid, text=doc, metadata=meta, dense_rank=rank)
 
+    # --- 2. BM25 (exact tokens) — resolved from the in-memory doc_map, no network ---
     toks = re.findall(r"[a-z0-9$%.]+", expanded.lower())
     bm_scores = st["bm25"].get_scores(toks)
     order = sorted(range(len(bm_scores)), key=lambda i: bm_scores[i], reverse=True)
@@ -121,12 +133,13 @@ def retrieve(query: str) -> list[Hit]:
             break
         cid = st["bm25_ids"][idx]
         if cid not in hits:
-            got = st["coll"].get(ids=[cid], include=["documents", "metadatas"])
-            if not got["ids"]:
+            doc = st["doc_map"].get(cid)
+            if not doc:
                 continue
-            hits[cid] = Hit(id=cid, text=got["documents"][0], metadata=got["metadatas"][0])
+            hits[cid] = Hit(id=cid, text=doc["text"], metadata=doc["metadata"])
         hits[cid].bm25_rank = rank
 
+    # --- 3. Reciprocal Rank Fusion ---
     k = settings.rrf_k
     for h in hits.values():
         h.fused = 1.00 * _rrf(h.dense_rank, k) + 0.75 * _rrf(h.bm25_rank, k)
@@ -135,6 +148,7 @@ def retrieve(query: str) -> list[Hit]:
     if not candidates:
         return []
 
+    # --- 4. Cross-encoder rerank (Cohere) ---
     scores = reranker.rerank(query, [h.text for h in candidates])
     for h, s in zip(candidates, scores):
         h.rerank_score = float(s)
@@ -142,6 +156,7 @@ def retrieve(query: str) -> list[Hit]:
 
     top = candidates[: settings.final_k]
 
+    # --- 5. Neighbor expansion — also resolved from doc_map, no network ---
     if settings.neighbor_expansion and top:
         have = {h.id for h in top}
         extra: list[Hit] = []
@@ -152,15 +167,15 @@ def retrieve(query: str) -> list[Hit]:
                 nid = h.metadata.get(nid_key, "")
                 if not nid or nid in have:
                     continue
-                got = st["coll"].get(ids=[nid], include=["documents", "metadatas"])
-                if not got["ids"]:
+                doc = st["doc_map"].get(nid)
+                if not doc:
                     continue
-                nmeta = got["metadatas"][0]
+                nmeta = doc["metadata"]
                 if nmeta.get("section_no") != h.metadata.get("section_no"):
                     continue
                 have.add(nid)
                 extra.append(
-                    Hit(id=nid, text=got["documents"][0], metadata=nmeta,
+                    Hit(id=nid, text=doc["text"], metadata=nmeta,
                         rerank_score=h.rerank_score - 0.01)
                 )
         top.extend(extra)
