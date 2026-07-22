@@ -1,0 +1,22 @@
+# Environments
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets — never commit this
+.env
+
+# Generated at ingest time — large, regenerable, and would blow past
+# GitHub's 100MB per-file limit (model.onnx.data alone is ~2.3GB)
+storage/chroma_db/
+storage/models/
+
+# Debug artifacts from local troubleshooting
+ingest_log.txt
+*.log
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+.vscode/settings.json
