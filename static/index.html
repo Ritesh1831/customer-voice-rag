@@ -180,8 +180,8 @@ let curBubble = null, curPills = null, playingBadge = null, typingRow = null;
 let audioCtx = null, nextStartTime = 0, pendingSources = 0;
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen = () => statusEl.textContent = '●\u00A0connected';
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);  ws.onopen = () => statusEl.textContent = '●\u00A0connected';
   ws.onclose = () => { statusEl.textContent = '●\u00A0reconnecting…'; setTimeout(connect, 1500); };
   ws.onmessage = e => handle(JSON.parse(e.data));
 }
